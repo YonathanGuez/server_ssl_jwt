@@ -1,0 +1,29 @@
+{
+  "name": "snode",
+  "version": "1.0.0",
+  "description": "version server ",
+  "main": "server.js",
+  "scripts": {
+    "test": "node server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/YonathanGuez/servernode.git"
+  },
+  "keywords": [
+    "azertyuio"
+  ],
+  "author": "yonathan",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/YonathanGuez/servernode/issues"
+  },
+  "homepage": "https://github.com/YonathanGuez/servernode#readme",
+  "dependencies": {
+    "body-parser": "^1.18.3",
+    "express": "^4.16.3",
+    "jsonwebtoken": "^8.3.0",
+    "mongoose": "^5.2.14",
+    "morgan": "^1.9.1"
+  }
+}
