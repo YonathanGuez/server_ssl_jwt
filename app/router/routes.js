@@ -1,60 +1,68 @@
 var express     = require('express');
 var User   = require('../models/user'); // get our mongoose model
 var jwt    = require('jsonwebtoken'); // used to create, sign, and verify tokens
-//var bcrypt = require('bcrypt');
+var bcrypt = require('bcrypt');
 // get an instance of the router for api routes
 var apiRoutes = express.Router(); 
 
 apiRoutes.post('/signup', function(req, res) {
   console.log(req.body);
-  const user = new User({
-    name: req.body.name, 
-    password: req.body.password,
-    admin: true 
-  });
-  user.save().then(function(result) {
-      console.log(result);
-      const payload = {admin: user.admin};
-      var token = jwt.sign(payload, 'superSecret', { expiresIn : 60*60*24});
-      res.status(200).json({
-        success: 'New user has been created',
-        message: 'Enjoy your token!',
-        token: token
+  bcrypt.hash(req.body.password, 10, function(err, hash){
+    if(err) {
+      return res.status(500).json({error: err});
+    }
+    else {
+      const user = new User({
+        name: req.body.name, 
+        password: hash,
+        admin: true 
       });
-  }).catch(error => {
-      res.status(500).json({
-        error: err
+      user.save().then(function(result) {
+        console.log(result);
+        const payload = {admin: user.admin};
+        var token = jwt.sign(payload, 'superSecret', { expiresIn : 60*60*24});
+        return res.status(200).json({
+          success: 'New user has been created',
+          message: 'Enjoy your token!',
+          token: token
+        });
+      }).catch(error => {
+        return res.status(500).json({
+          error: err
+        });
       });
+    }
   });
 });
 
 // route to authenticate a user (POST http://localhost:8080/api/signin)
 apiRoutes.post('/signin', function(req, res) {
     // find the user
-  User.findOne({name: req.body.name}, function(err, user) {
-      if (err) throw err;
-      if (!user) {
-        res.json({ success: false, message: 'Authentication failed. User not found.' });
-      }
-      else if (user) {
-        // check if password matches
-        if (user.password != req.body.password) {
-          res.json({ success: false, message: 'Authentication failed. Wrong password.' });
+  User.findOne({name: req.body.name}, function(err,user) {
+    if (!user) {
+      return res.status(401).json({ success: false, message: 'Authentication failed. User not found.' });
+    }
+    else if (user) {
+      bcrypt.compare(req.body.password, user.password, function(err, result){
+        if(err) {
+          return res.status(401).json({
+             failed: 'Unauthorized Access err'
+          });
+        }
+        if(result) {
+          const payload = {admin: user.admin};
+          var token = jwt.sign(payload, 'superSecret', { expiresIn : 60*60*24});
+          // return the information including token as JSON
+          return res.status(200).json({
+              success: true,
+              message: 'Enjoy your token!',
+              token: token
+          });
         }
         else {
-          // if user is found and password is right
-          // create a token with only our given payload
-          // we don't want to pass in the entire user since that has the password
-        const payload = {admin: user.admin};
-        var token = jwt.sign(payload, 'superSecret', { expiresIn : 60*60*24});
-  
-          // return the information including token as JSON
-        res.json({
-            success: true,
-            message: 'Enjoy your token!',
-            token: token
-        });
-      }   
+          return res.status(401).json({success: false, message: 'Authentication failed. Wrong password.'});
+        }
+      });  
     }
   });
 });
@@ -78,11 +86,7 @@ apiRoutes.use(function(req, res, next) {
   }
   else {
     // if there is no token
-    // return an error
-    return res.status(403).send({ 
-        success: false, 
-        message: 'No token provided.' 
-    });
+    return res.status(403).send({success: false, message: 'No token provided.'});
   }
 });
 
