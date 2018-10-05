@@ -2,37 +2,43 @@ var express     = require('express');
 var User   = require('../models/user'); // get our mongoose model
 var jwt    = require('jsonwebtoken'); // used to create, sign, and verify tokens
 var bcrypt = require('bcrypt');
-// get an instance of the router for api routes
 var apiRoutes = express.Router(); 
+const SALTWORKFACTORY=10;
 
 apiRoutes.post('/signup', function(req, res) {
   console.log(req.body);
-  bcrypt.hash(req.body.password, 10, function(err, hash){
-    if(err) {
-      return res.status(500).json({error: err});
-    }
-    else {
-      const user = new User({
-        name: req.body.name, 
-        password: hash,
-        admin: true 
-      });
-      user.save().then(function(result) {
-        console.log(result);
-        const payload = {admin: user.admin};
-        var token = jwt.sign(payload, 'superSecret', { expiresIn : 60*60*24});
-        return res.status(200).json({
-          success: 'New user has been created',
-          message: 'Enjoy your token!',
-          token: token
+  //generate SALT
+  bcrypt.genSalt(SALTWORKFACTORY,function(err,salt){
+    if(err) return next(err);
+    //Hash password
+    bcrypt.hash(req.body.password, salt, function(err, hash){
+      if(err) {
+        return res.status(500).json({error: err});
+      }
+      else {
+        const user = new User({
+          name: req.body.name, 
+          password: hash,
+          admin: true 
         });
-      }).catch(error => {
-        return res.status(500).json({
-          error: err
+        user.save().then(function(result) {
+          console.log(result);
+          const payload = {admin: user.admin};
+          var token = jwt.sign(payload, 'superSecret', { expiresIn : 60*60*24});
+          return res.status(200).json({
+            success: 'New user has been created',
+            message: 'Enjoy your token!',
+            token: token
+          });
+        }).catch(error => {
+          return res.status(500).json({
+            error: err
+          });
         });
-      });
-    }
+      }
+    });
   });
+  
 });
 
 // route to authenticate a user (POST http://localhost:8080/api/signin)
